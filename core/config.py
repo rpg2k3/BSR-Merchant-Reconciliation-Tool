@@ -1,21 +1,36 @@
 """Configuration management for BSR Reconciliation Tool.
 
 Loads/saves settings from ~/.bsr_recon_config.json.
+Working directory is always the repo root (parent of this file's directory).
 """
 
 import json
 import os
 from pathlib import Path
 
+# Static working directory: repo root (one level up from core/)
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+WORKING_DIR = Path(os.path.dirname(_THIS_DIR))
+
 CONFIG_PATH = Path.home() / ".bsr_recon_config.json"
 
 DEFAULTS = {
-    "working_directory": "",
     "claude_api_key": "",
     "date_tolerance_days": 2,
     "high_value_threshold": 500_000,
     "large_payment_threshold": 1_000_000,
 }
+
+# All required data folders relative to WORKING_DIR
+_FOLDERS = [
+    WORKING_DIR / "Transactions" / "MTN",
+    WORKING_DIR / "Transactions" / "Airtel",
+    WORKING_DIR / "Statements",
+    WORKING_DIR / "Reports" / "Karibu" / "MTN",
+    WORKING_DIR / "Reports" / "Karibu" / "Airtel",
+    WORKING_DIR / "Reconciliation",
+    WORKING_DIR / "Backups",
+]
 
 
 def load_config() -> dict:
@@ -28,6 +43,8 @@ def load_config() -> dict:
             config.update(saved)
         except (json.JSONDecodeError, OSError):
             pass
+    # Strip legacy key if present
+    config.pop("working_directory", None)
     return config
 
 
@@ -37,27 +54,13 @@ def save_config(config: dict):
         json.dump(config, f, indent=2)
 
 
-def get_working_dir(config: dict) -> Path:
-    """Return working directory as Path, or None if not set."""
-    wd = config.get("working_directory", "")
-    if wd and os.path.isdir(wd):
-        return Path(wd)
-    return None
+def ensure_folders() -> list[str]:
+    """Create all required data folders if they don't exist.
 
-
-def ensure_folder_structure(base: Path):
-    """Create required subfolders if they don't exist."""
-    folders = [
-        base / "Transactions" / "MTN",
-        base / "Transactions" / "Airtel",
-        base / "Statements",
-        base / "Reports" / "Karibu" / "MTN",
-        base / "Reports" / "Karibu" / "Airtel",
-        base / "Reconciliation",
-        base / "Backups",
-    ]
+    Returns list of newly created folder paths.
+    """
     created = []
-    for folder in folders:
+    for folder in _FOLDERS:
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)
             created.append(str(folder))

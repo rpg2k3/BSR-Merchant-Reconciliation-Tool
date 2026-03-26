@@ -7,13 +7,13 @@ from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QTextEdit, QProgressBar, QFrame, QFileDialog,
-    QSplitter, QGroupBox, QMessageBox,
+    QPushButton, QLabel, QTextEdit, QProgressBar, QFrame,
+    QSplitter, QGroupBox,
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QFont, QColor, QTextCharFormat, QIcon
 
-from core.config import load_config, save_config, get_working_dir, ensure_folder_structure
+from core.config import load_config, save_config, WORKING_DIR
 from ui.settings_dialog import SettingsDialog
 from workers.qt_workers import UpdateWorker, ReconcileWorker
 
@@ -36,20 +36,16 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         main_layout = QVBoxLayout(central)
 
-        # Top bar: title + working dir + settings
+        # Top bar: title + data folder path + settings
         top_bar = QHBoxLayout()
         title = QLabel("BSR Merchant Reconciliation Tool")
         title.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         top_bar.addWidget(title)
         top_bar.addStretch()
 
-        self.dir_label = QLabel(f"Working Directory: {self.config.get('working_directory', 'Not set')}")
-        self.dir_label.setFont(QFont("Arial", 9))
-        top_bar.addWidget(self.dir_label)
-
-        change_btn = QPushButton("Change")
-        change_btn.clicked.connect(self._change_dir)
-        top_bar.addWidget(change_btn)
+        dir_label = QLabel(f"Data folder: {WORKING_DIR}")
+        dir_label.setFont(QFont("Arial", 9))
+        top_bar.addWidget(dir_label)
 
         settings_btn = QPushButton("Settings")
         settings_btn.clicked.connect(self._open_settings)
@@ -219,18 +215,6 @@ class MainWindow(QMainWindow):
     # Actions
     # -------------------------------------------------------------------
 
-    def _check_working_dir(self) -> Path | None:
-        wd = get_working_dir(self.config)
-        if not wd:
-            self._log("Working directory not set. Please configure in Settings.", "error")
-            self._open_settings()
-            wd = get_working_dir(self.config)
-        if wd:
-            created = ensure_folder_structure(wd)
-            for f in created:
-                self._log(f"Created missing folder: {f}", "warning")
-        return wd
-
     def _set_busy(self, busy: bool):
         self.progress.setVisible(busy)
         for btn in [self.btn_update_mtn, self.btn_update_airtel,
@@ -238,14 +222,10 @@ class MainWindow(QMainWindow):
             btn.setEnabled(not busy)
 
     def _run_update(self, channel: str):
-        wd = self._check_working_dir()
-        if not wd:
-            return
-
         self._set_busy(True)
         self._log(f"Starting {channel} statement update...", "info")
 
-        self._current_worker = UpdateWorker(channel, wd)
+        self._current_worker = UpdateWorker(channel, WORKING_DIR)
         self._current_worker.log_signal.connect(self._log)
         self._current_worker.finished_signal.connect(
             lambda result: self._on_update_finished(result, channel)
@@ -265,14 +245,10 @@ class MainWindow(QMainWindow):
             self._continue_run_both()
 
     def _run_reconcile(self, channel: str):
-        wd = self._check_working_dir()
-        if not wd:
-            return
-
         self._set_busy(True)
         self._log(f"Starting {channel} reconciliation...", "info")
 
-        self._current_worker = ReconcileWorker(channel, wd, self.config)
+        self._current_worker = ReconcileWorker(channel, WORKING_DIR, self.config)
         self._current_worker.log_signal.connect(self._log)
         self._current_worker.ai_narrative_signal.connect(self._show_ai_narrative)
         self._current_worker.finished_signal.connect(
@@ -299,10 +275,6 @@ class MainWindow(QMainWindow):
 
     def _run_both(self):
         """Run update + reconcile for both MTN and Airtel sequentially."""
-        wd = self._check_working_dir()
-        if not wd:
-            return
-
         self._run_both_state = [
             ("update", "MTN"),
             ("update", "Airtel"),
@@ -333,14 +305,8 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------
 
     def _refresh_status(self):
-        wd = get_working_dir(self.config)
-        if not wd:
-            self.mtn_status_label.setText("MTN Statement:\n  Not configured")
-            self.airtel_status_label.setText("Airtel Statement:\n  Not configured")
-            return
-
         # MTN
-        mtn_path = wd / "Statements" / "BSR_MTN_Merchant_Transactions.xlsx"
+        mtn_path = WORKING_DIR / "Statements" / "BSR_MTN_Merchant_Transactions.xlsx"
         if mtn_path.exists():
             try:
                 from core.parsers import load_mtn_statement
@@ -354,7 +320,7 @@ class MainWindow(QMainWindow):
             self.mtn_status_label.setText("MTN Statement:\n  No file")
 
         # Airtel
-        airtel_path = wd / "Statements" / "BSR_Airtel_Merchant_Transactions.xlsx"
+        airtel_path = WORKING_DIR / "Statements" / "BSR_Airtel_Merchant_Transactions.xlsx"
         if airtel_path.exists():
             try:
                 from core.parsers import load_airtel_statement
@@ -368,30 +334,16 @@ class MainWindow(QMainWindow):
             self.airtel_status_label.setText("Airtel Statement:\n  No file")
 
     # -------------------------------------------------------------------
-    # Settings / directory
+    # Settings
     # -------------------------------------------------------------------
-
-    def _change_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "Select Working Directory")
-        if path:
-            self.config["working_directory"] = path
-            save_config(self.config)
-            self.dir_label.setText(f"Working Directory: {path}")
-            self._refresh_status()
 
     def _open_settings(self):
         dlg = SettingsDialog(self.config, self)
         if dlg.exec():
             self.config = dlg.get_config()
             save_config(self.config)
-            self.dir_label.setText(f"Working Directory: {self.config.get('working_directory', 'Not set')}")
-            self._refresh_status()
 
     def _open_output_folder(self):
-        wd = get_working_dir(self.config)
-        if not wd:
-            self._log("Working directory not set", "warning")
-            return
-        recon_dir = wd / "Reconciliation"
+        recon_dir = WORKING_DIR / "Reconciliation"
         recon_dir.mkdir(exist_ok=True)
         subprocess.Popen(["xdg-open", str(recon_dir)])

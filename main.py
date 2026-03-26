@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QFont, QPalette, QColor
 
+from core.config import ensure_folders
 from ui.main_window import MainWindow
 
 
@@ -48,6 +49,9 @@ def main():
     # Set default font
     font = QFont("Arial", 10)
     app.setFont(font)
+
+    # Create data folders on first launch
+    ensure_folders()
 
     window = MainWindow()
     window.show()

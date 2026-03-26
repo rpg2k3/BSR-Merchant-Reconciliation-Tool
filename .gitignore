@@ -5,3 +5,30 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Data files - not committed to repo
+*.xlsx
+*.csv
+
+# Ignore data folder contents but keep structure via .gitkeep
+Transactions/**
+!Transactions/MTN/
+!Transactions/MTN/.gitkeep
+!Transactions/Airtel/
+!Transactions/Airtel/.gitkeep
+
+Statements/**
+!Statements/.gitkeep
+
+Reports/**
+!Reports/Karibu/
+!Reports/Karibu/MTN/
+!Reports/Karibu/MTN/.gitkeep
+!Reports/Karibu/Airtel/
+!Reports/Karibu/Airtel/.gitkeep
+
+Reconciliation/**
+!Reconciliation/.gitkeep
+
+Backups/**
+!Backups/.gitkeep

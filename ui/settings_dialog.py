@@ -2,7 +2,7 @@
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QGroupBox,
+    QLabel, QLineEdit, QSpinBox, QPushButton, QGroupBox,
 )
 from PyQt6.QtCore import Qt
 
@@ -19,18 +19,6 @@ class SettingsDialog(QDialog):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-
-        # Working directory
-        dir_group = QGroupBox("Working Directory")
-        dir_layout = QHBoxLayout()
-        self.dir_edit = QLineEdit(self.config.get("working_directory", ""))
-        self.dir_edit.setReadOnly(True)
-        dir_btn = QPushButton("Browse...")
-        dir_btn.clicked.connect(self._browse_dir)
-        dir_layout.addWidget(self.dir_edit)
-        dir_layout.addWidget(dir_btn)
-        dir_group.setLayout(dir_layout)
-        layout.addWidget(dir_group)
 
         # AI settings
         ai_group = QGroupBox("Claude AI (Optional)")
@@ -80,13 +68,7 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
 
-    def _browse_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "Select Working Directory")
-        if path:
-            self.dir_edit.setText(path)
-
     def _save(self):
-        self.config["working_directory"] = self.dir_edit.text()
         self.config["claude_api_key"] = self.api_key_edit.text()
         self.config["date_tolerance_days"] = self.date_tol_spin.value()
         self.config["high_value_threshold"] = self.high_value_spin.value()
