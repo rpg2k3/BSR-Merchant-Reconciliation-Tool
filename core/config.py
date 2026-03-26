@@ -1,16 +1,34 @@
 """Configuration management for BSR Reconciliation Tool.
 
 Loads/saves settings from ~/.bsr_recon_config.json.
-Working directory is always the repo root (parent of this file's directory).
+WORKING_DIR resolves correctly both from source and as a PyInstaller executable.
 """
 
 import json
 import os
+import sys
 from pathlib import Path
 
-# Static working directory: repo root (one level up from core/)
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-WORKING_DIR = Path(os.path.dirname(_THIS_DIR))
+
+def _get_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        # Running as PyInstaller executable — use the folder containing the exe
+        return Path(os.path.dirname(sys.executable))
+    else:
+        # Running from source — go up from core/ to repo root
+        return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+WORKING_DIR = _get_base_dir()
+
+# Named path constants for all data folders
+TRANSACTIONS_MTN = WORKING_DIR / "Transactions" / "MTN"
+TRANSACTIONS_AIRTEL = WORKING_DIR / "Transactions" / "Airtel"
+STATEMENTS_DIR = WORKING_DIR / "Statements"
+KARIBU_MTN_DIR = WORKING_DIR / "Reports" / "Karibu" / "MTN"
+KARIBU_AIRTEL_DIR = WORKING_DIR / "Reports" / "Karibu" / "Airtel"
+RECONCILIATION_DIR = WORKING_DIR / "Reconciliation"
+BACKUPS_DIR = WORKING_DIR / "Backups"
 
 CONFIG_PATH = Path.home() / ".bsr_recon_config.json"
 
@@ -20,17 +38,6 @@ DEFAULTS = {
     "high_value_threshold": 500_000,
     "large_payment_threshold": 1_000_000,
 }
-
-# All required data folders relative to WORKING_DIR
-_FOLDERS = [
-    WORKING_DIR / "Transactions" / "MTN",
-    WORKING_DIR / "Transactions" / "Airtel",
-    WORKING_DIR / "Statements",
-    WORKING_DIR / "Reports" / "Karibu" / "MTN",
-    WORKING_DIR / "Reports" / "Karibu" / "Airtel",
-    WORKING_DIR / "Reconciliation",
-    WORKING_DIR / "Backups",
-]
 
 
 def load_config() -> dict:
@@ -43,7 +50,6 @@ def load_config() -> dict:
             config.update(saved)
         except (json.JSONDecodeError, OSError):
             pass
-    # Strip legacy key if present
     config.pop("working_directory", None)
     return config
 
@@ -55,12 +61,10 @@ def save_config(config: dict):
 
 
 def ensure_folders() -> list[str]:
-    """Create all required data folders if they don't exist.
-
-    Returns list of newly created folder paths.
-    """
+    """Create all required data folders if they don't exist."""
     created = []
-    for folder in _FOLDERS:
+    for folder in [TRANSACTIONS_MTN, TRANSACTIONS_AIRTEL, STATEMENTS_DIR,
+                    KARIBU_MTN_DIR, KARIBU_AIRTEL_DIR, RECONCILIATION_DIR, BACKUPS_DIR]:
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)
             created.append(str(folder))

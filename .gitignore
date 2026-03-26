@@ -3,12 +3,19 @@ __pycache__/
 *.pyo
 .env
 *.egg-info/
+
+# Build output
 dist/
 build/
+*.spec.bak
+*.manifest
 
 # Data files - not committed to repo
 *.xlsx
 *.csv
+
+# Config with API keys
+.bsr_recon_config.json
 
 # Ignore data folder contents but keep structure via .gitkeep
 Transactions/**
@@ -32,3 +39,10 @@ Reconciliation/**
 
 Backups/**
 !Backups/.gitkeep
+
+# Keep these files
+!assets/icon.png
+!build.sh
+!install.sh
+!uninstall.sh
+!BSR_Recon.spec

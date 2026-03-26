@@ -8,13 +8,14 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QProgressBar, QFrame,
-    QSplitter, QGroupBox,
+    QSplitter, QGroupBox, QTabWidget,
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QFont, QColor, QTextCharFormat, QIcon
 
-from core.config import load_config, save_config, WORKING_DIR
+from core.config import load_config, save_config, WORKING_DIR, STATEMENTS_DIR, RECONCILIATION_DIR
 from ui.settings_dialog import SettingsDialog
+from ui.upload_panel import UploadPanel
 from workers.qt_workers import UpdateWorker, ReconcileWorker
 
 
@@ -58,15 +59,26 @@ class MainWindow(QMainWindow):
         line.setFrameShape(QFrame.Shape.HLine)
         main_layout.addWidget(line)
 
-        # Body: left panel (actions+status) | right panel (log+AI)
+        # Body: left tabs (actions/upload) | right panel (log+AI)
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Left panel
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(5, 5, 5, 5)
+        # Left panel with tabs
+        left_tabs = QTabWidget()
+        left_tabs.setStyleSheet("""
+            QTabWidget::pane { border: 1px solid #3a3a3a; }
+            QTabBar::tab {
+                color: #ffffff; background: #2d2d2d;
+                padding: 6px 16px; border: 1px solid #3a3a3a;
+            }
+            QTabBar::tab:selected { background: #3a3a3a; border-bottom: 2px solid #1F6B2E; }
+            QTabBar::tab:hover { background: #4a4a4a; }
+        """)
 
-        # Actions group
+        # --- Actions tab ---
+        actions_tab = QWidget()
+        actions_tab_layout = QVBoxLayout(actions_tab)
+        actions_tab_layout.setContentsMargins(5, 5, 5, 5)
+
         actions_group = QGroupBox("Actions")
         actions_layout = QVBoxLayout()
 
@@ -95,7 +107,7 @@ class MainWindow(QMainWindow):
         actions_layout.addWidget(self.btn_run_both)
 
         actions_group.setLayout(actions_layout)
-        left_layout.addWidget(actions_group)
+        actions_tab_layout.addWidget(actions_group)
 
         # Status group
         status_group = QGroupBox("Status")
@@ -110,22 +122,31 @@ class MainWindow(QMainWindow):
         status_layout.addWidget(self.airtel_status_label)
 
         status_group.setLayout(status_layout)
-        left_layout.addWidget(status_group)
+        actions_tab_layout.addWidget(status_group)
 
         # Progress bar
         self.progress = QProgressBar()
         self.progress.setRange(0, 0)  # Indeterminate
         self.progress.setVisible(False)
-        left_layout.addWidget(self.progress)
+        actions_tab_layout.addWidget(self.progress)
 
-        left_layout.addStretch()
+        actions_tab_layout.addStretch()
 
         # Open output folder button
         self.btn_open_folder = QPushButton("Open Output Folder")
         self.btn_open_folder.clicked.connect(self._open_output_folder)
-        left_layout.addWidget(self.btn_open_folder)
+        actions_tab_layout.addWidget(self.btn_open_folder)
 
-        splitter.addWidget(left_widget)
+        left_tabs.addTab(actions_tab, "Actions")
+
+        # --- Upload Files tab ---
+        self.upload_panel = UploadPanel()
+        self.upload_panel.log_signal.connect(self._log)
+        self.upload_panel.files_uploaded.connect(self._refresh_status)
+        self.upload_panel.request_update.connect(self._run_update)
+        left_tabs.addTab(self.upload_panel, "Upload Files")
+
+        splitter.addWidget(left_tabs)
 
         # Right panel
         right_widget = QWidget()
@@ -306,7 +327,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_status(self):
         # MTN
-        mtn_path = WORKING_DIR / "Statements" / "BSR_MTN_Merchant_Transactions.xlsx"
+        mtn_path = STATEMENTS_DIR / "BSR_MTN_Merchant_Transactions.xlsx"
         if mtn_path.exists():
             try:
                 from core.parsers import load_mtn_statement
@@ -320,7 +341,7 @@ class MainWindow(QMainWindow):
             self.mtn_status_label.setText("MTN Statement:\n  No file")
 
         # Airtel
-        airtel_path = WORKING_DIR / "Statements" / "BSR_Airtel_Merchant_Transactions.xlsx"
+        airtel_path = STATEMENTS_DIR / "BSR_Airtel_Merchant_Transactions.xlsx"
         if airtel_path.exists():
             try:
                 from core.parsers import load_airtel_statement
@@ -344,6 +365,6 @@ class MainWindow(QMainWindow):
             save_config(self.config)
 
     def _open_output_folder(self):
-        recon_dir = WORKING_DIR / "Reconciliation"
+        recon_dir = RECONCILIATION_DIR
         recon_dir.mkdir(exist_ok=True)
         subprocess.Popen(["xdg-open", str(recon_dir)])
