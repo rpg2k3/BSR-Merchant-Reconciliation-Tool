@@ -34,13 +34,51 @@ def parse_mtn_csv(file_path: Path) -> pd.DataFrame:
 # Airtel Transaction CSVs
 # ---------------------------------------------------------------------------
 
+def _read_airtel_csv_flexible(file_path: Path, skiprows: int) -> pd.DataFrame:
+    """Read an Airtel CSV, merging extra fields caused by unquoted commas.
+
+    Airtel CSVs have free-text fields (e.g. Reference No.) that may contain
+    commas without quoting, producing rows with more fields than columns.
+    When extra fields are detected, they are merged back into the 3rd column
+    (Reference No., 0-indexed col 2) which is the typical culprit.
+    """
+    import csv
+    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+        lines = f.readlines()
+    # Skip header block
+    lines = lines[skiprows:]
+    if not lines:
+        return pd.DataFrame()
+    # Parse header to get expected column count
+    header = next(csv.reader([lines[0]]))
+    header = [h.strip() for h in header]
+    n_cols = len(header)
+
+    rows = []
+    for line in lines[1:]:
+        fields = next(csv.reader([line]))
+        if len(fields) == n_cols:
+            rows.append(fields)
+        elif len(fields) > n_cols:
+            # Merge the extra fields into the Reference No. column (index 2)
+            extra = len(fields) - n_cols
+            merged = ",".join(fields[2 : 2 + extra + 1])
+            fixed = fields[:2] + [merged] + fields[2 + extra + 1 :]
+            rows.append(fixed)
+        elif len(fields) > 0:
+            # Fewer fields than expected — pad with empty strings
+            rows.append(fields + [""] * (n_cols - len(fields)))
+
+    return pd.DataFrame(rows, columns=header, dtype=str)
+
+
 def parse_airtel_customer_csv(file_path: Path) -> pd.DataFrame:
     """Parse Airtel Customer Transaction Report CSV.
 
     Skip first 5 rows (title block), row 6 is header (0-indexed: skiprows=5).
     Transaction ID may be in scientific notation — normalize to full integer string.
     """
-    df = pd.read_csv(file_path, skiprows=5, dtype=str)
+    df = _read_airtel_csv_flexible(file_path, skiprows=5)
     # Clean column names
     df.columns = df.columns.str.strip()
 
@@ -81,7 +119,7 @@ def parse_airtel_user_csv(file_path: Path) -> pd.DataFrame:
     Transaction Type: MP + ChannelWallet To Bank Transfer = contra.
     MR = merchant receipt. SCP = service charge (ignore).
     """
-    df = pd.read_csv(file_path, skiprows=5, dtype=str)
+    df = _read_airtel_csv_flexible(file_path, skiprows=5)
     df.columns = df.columns.str.strip()
 
     if "Transaction ID" in df.columns:
