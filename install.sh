@@ -48,12 +48,11 @@ DESKTOP
 echo "> Updating application database..."
 sudo update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 
-# 5. Make data dirs writable by all users
-sudo chmod -R 777 "$INSTALL_DIR/Transactions" \
-                  "$INSTALL_DIR/Statements" \
-                  "$INSTALL_DIR/Reports" \
-                  "$INSTALL_DIR/Reconciliation" \
-                  "$INSTALL_DIR/Backups"
+# 5. Data folders now live in ~/.local/share/BSR_Recon/ (created at first launch)
+#    Remove stale data dirs from install location if present
+for dir in Transactions Statements Reports Reconciliation Backups; do
+    sudo rm -rf "$INSTALL_DIR/$dir"
+done
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

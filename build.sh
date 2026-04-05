@@ -22,26 +22,10 @@ rm -rf dist/ build/ __pycache__/
 echo "> Building with PyInstaller..."
 pyinstaller BSR_Recon.spec --clean --noconfirm
 
-# 5. Create data folder structure next to executable
-echo "> Creating data folders..."
-mkdir -p dist/BSR_Recon/Transactions/MTN
-mkdir -p dist/BSR_Recon/Transactions/Airtel
-mkdir -p dist/BSR_Recon/Statements
-mkdir -p dist/BSR_Recon/Reports/Karibu/MTN
-mkdir -p dist/BSR_Recon/Reports/Karibu/Airtel
-mkdir -p dist/BSR_Recon/Reconciliation
-mkdir -p dist/BSR_Recon/Backups
+# 5. Data folders are created at first launch in ~/.local/share/BSR_Recon/
+#    No need to bundle them inside the dist.
 
-# 6. Add .gitkeep files so folders are not empty
-touch dist/BSR_Recon/Transactions/MTN/.gitkeep
-touch dist/BSR_Recon/Transactions/Airtel/.gitkeep
-touch dist/BSR_Recon/Statements/.gitkeep
-touch dist/BSR_Recon/Reports/Karibu/MTN/.gitkeep
-touch dist/BSR_Recon/Reports/Karibu/Airtel/.gitkeep
-touch dist/BSR_Recon/Reconciliation/.gitkeep
-touch dist/BSR_Recon/Backups/.gitkeep
-
-# 7. Create a launcher script next to the executable
+# 6. Create a launcher script next to the executable
 cat > dist/BSR_Recon/launch.sh << 'LAUNCHER'
 #!/bin/bash
 cd "$(dirname "$0")"

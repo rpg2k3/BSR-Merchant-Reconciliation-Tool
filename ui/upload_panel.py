@@ -253,12 +253,13 @@ class UploadPanel(QWidget):
     def _browse(self, type_name: str):
         """Open file dialog for the given type."""
         if "Statement" in type_name:
-            filt = "Excel Files (*.xlsx)"
+            filters = ["Excel Files (*.xlsx)"]
         else:
-            filt = "CSV Files (*.csv);;All Files (*)"
+            filters = ["CSV Files (*.csv)", "All Files (*.*)"]
 
+        filter_str = ";;".join(filters)
         files, _ = QFileDialog.getOpenFileNames(
-            self, f"Select {type_name} files", self._last_browse_dir, filt
+            self, f"Select {type_name} files", self._last_browse_dir, filter_str
         )
         if not files:
             return
@@ -337,9 +338,9 @@ class UploadPanel(QWidget):
 
     def _upload_and_update(self, channel: str):
         """Browse for transaction CSVs, upload them, then trigger statement update."""
-        filt = "CSV Files (*.csv);;All Files (*)"
         files, _ = QFileDialog.getOpenFileNames(
-            self, f"Select {channel} transaction files", self._last_browse_dir, filt
+            self, f"Select {channel} transaction files", self._last_browse_dir,
+            "CSV Files (*.csv);;All Files (*.*)"
         )
         if not files:
             return

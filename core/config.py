@@ -12,8 +12,12 @@ from pathlib import Path
 
 def _get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
-        # Running as PyInstaller executable — use the folder containing the exe
-        return Path(os.path.dirname(sys.executable))
+        # Running as PyInstaller executable — use a user-writable data directory
+        # so the app works without root even when installed to /opt
+        data_dir = Path(os.environ.get(
+            "XDG_DATA_HOME", Path.home() / ".local" / "share"
+        )) / "BSR_Recon"
+        return data_dir
     else:
         # Running from source — go up from core/ to repo root
         return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
