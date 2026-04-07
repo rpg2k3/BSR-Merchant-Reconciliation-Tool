@@ -259,7 +259,8 @@ class UploadPanel(QWidget):
 
         filter_str = ";;".join(filters)
         files, _ = QFileDialog.getOpenFileNames(
-            self, f"Select {type_name} files", self._last_browse_dir, filter_str
+            self, f"Select {type_name} files", self._last_browse_dir, filter_str,
+            options=QFileDialog.Option.DontUseNativeDialog,
         )
         if not files:
             return
@@ -340,7 +341,8 @@ class UploadPanel(QWidget):
         """Browse for transaction CSVs, upload them, then trigger statement update."""
         files, _ = QFileDialog.getOpenFileNames(
             self, f"Select {channel} transaction files", self._last_browse_dir,
-            "CSV Files (*.csv);;All Files (*.*)"
+            "CSV Files (*.csv);;All Files (*.*)",
+            options=QFileDialog.Option.DontUseNativeDialog,
         )
         if not files:
             return

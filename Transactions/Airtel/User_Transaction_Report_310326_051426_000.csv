@@ -1,0 +1,16 @@
+
+	,,,User_Transaction_Report
+	Selection Criteria :
+From Date :Mar 28  2026
+To Date :Mar 31  2026
+S. No.,Transaction ID,Sender Msisdn,Transaction Amount,Transaction Date and Time,Transaction Type,Receiver Msisdn,Service Name,Transaction Status,Reference Number,Previous Balance,Post Balance,external_transaction_id
+1,144009309520,756240144,1000000,31-MAR-26,MR,748020614,Merchant Payment,Transaction Success,Sadiq kampala,854140.62,1844140.62,APCUG201844844693440
+2,144009309520,IND03,10000,31-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,Sadiq kampala,854140.62,1844140.62,APCUG201844844693440
+3,143945568182,IND03,300,30-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,Gilled chicken and chips one  one,824440.62,854140.62,APCUG201761401756992
+4,143945568182,756493687,30000,30-MAR-26,MR,748020614,Merchant Payment,Transaction Success,Gilled chicken and chips one  one,824440.62,854140.62,APCUG201761401756992
+5,143885254289,752733300,200000,29-MAR-26,MR,748020614,Merchant Payment,Transaction Success,hotal,626440.62,824440.62,APCUG201681343417792
+6,143885254289,IND03,2000,29-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,hotal,626440.62,824440.62,APCUG201681343417792
+7,143833162959,702941323,58000,28-MAR-26,MR,748020614,Merchant Payment,Transaction Success,Fffff,569020.62,626440.62,APCUG201605576244736
+8,143833162959,IND03,580,28-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,Fffff,569020.62,626440.62,APCUG201605576244736
+9,143827736094,IND03,1000,28-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,send money,470020.62,569020.62,APCUG201602590188032
+10,143827736094,753823514,100000,28-MAR-26,MR,748020614,Merchant Payment,Transaction Success,send money,470020.62,569020.62,APCUG201602590188032

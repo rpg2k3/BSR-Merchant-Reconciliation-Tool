@@ -1,0 +1,9 @@
+
+	,,,User_Transaction_Report
+	Selection Criteria :
+From Date :Mar 20  2026
+To Date :Mar 24  2026
+S. No.,Transaction ID,Sender Msisdn,Transaction Amount,Transaction Date and Time,Transaction Type,Receiver Msisdn,Service Name,Transaction Status,Reference Number,Previous Balance,Post Balance,external_transaction_id
+1,143452191244,ae46586c58131e9aa2ec2ff66456ffc2,3700000,23-MAR-26,MP,ae46586c58131e9aa2ec2ff66456ffc2,ChannelWallet To Bank Transfer,Transaction Success,APCUG201130349304512,3729470.62,29470.62,
+2,143350061296,753741768,400000,21-MAR-26,MR,748020614,Merchant Payment,Transaction Success,boat supreme adventure,3333470.62,3729470.62,APCUG200986063498880
+3,143350061296,IND03,4000,21-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,boat supreme adventure,3333470.62,3729470.62,APCUG200986063498880

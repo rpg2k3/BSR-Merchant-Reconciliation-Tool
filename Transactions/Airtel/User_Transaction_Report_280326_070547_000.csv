@@ -1,0 +1,12 @@
+
+	,,,User_Transaction_Report
+	Selection Criteria :
+From Date :Mar 24  2026
+To Date :Mar 28  2026
+S. No.,Transaction ID,Sender Msisdn,Transaction Amount,Transaction Date and Time,Transaction Type,Receiver Msisdn,Service Name,Transaction Status,Reference Number,Previous Balance,Post Balance,external_transaction_id
+1,143659624110,752226242,300000,26-MAR-26,MR,748020614,Merchant Payment,Transaction Success,c73b94fc-d782-42e0-8b5c-7dce3390f543,173020.62,470020.62,c73b94fc-d782-42e0-8b5c-7dce3390f543
+2,143659624110,IND03,3000,26-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,c73b94fc-d782-42e0-8b5c-7dce3390f543,173020.62,470020.62,c73b94fc-d782-42e0-8b5c-7dce3390f543
+3,143554023033,700670897,135000,24-MAR-26,MR,748020614,Merchant Payment,Transaction Success,pay4food,39370.62,173020.62,APCUG201248910197696
+4,143554023033,IND03,1350,24-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,pay4food,39370.62,173020.62,APCUG201248910197696
+5,143550486935,756493687,10000,24-MAR-26,MR,748020614,Merchant Payment,Transaction Success,Ss,29470.62,39370.62,APCUG201246471778624
+6,143550486935,IND03,100,24-MAR-26,SCP,748020614,Merchant Payment,Transaction Success,Ss,29470.62,39370.62,APCUG201246471778624

@@ -1,0 +1,7 @@
+
+	,,,Customer_Transaction_Report
+	Selection Criteria :MFS Provider: Airtel
+From Date :Mar 20  2026
+To Date :Mar 24  2026
+Record No,Transaction ID,Reference No.,Transaction Date & Time,Payer MFS Provider,Payer Payment Instrument,Payer Wallet Type/Linked Bank,Payer Bank Account No/Mobile No,Payer User Name,Sender Grade,Payer Nick Name,Payer Mobile Number,Payer Category,Payee MFS Provider,Payee Payment Instrument,Payee Wallet Type/Linked Bank,Receiver Mobile Number,Payee Bank Account No/Mobile No,Receiver Category,Receiver Grade,Payee User Name,Payee Nick Name,Service Type,Transaction Status,Transaction Amount,Payer Previous Balance,Payer Post Balance,Payee Pre Balance,Payee Post Balance,Total Service Charge,External Transaction id,Receiver_name, Reason
+1,143350061296,boat supreme adventure,21-MAR-2026  19:57:32,Airtel,WALLET,Normal,753741768,SAMUEL AHEBWA,Gold Subscriber,932485ac43bbff6de77c19f5742fd02c,753741768,Subscriber,Airtel,WALLET,Normal,748020614,748020614,Head Merchant,Formal Merchant Chains,BUNYONYI SAFARIS LIMITED BUNYONYI SAFARIS LIMITED,efe4cf9e46f023d8,Merchant Payment,Transaction Success,400000,NA,NA,3333470.62,3729470.62,4000,APCUG200986063498880,NA,NA

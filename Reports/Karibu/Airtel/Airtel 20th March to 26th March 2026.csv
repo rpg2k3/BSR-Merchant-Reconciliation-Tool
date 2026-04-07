@@ -1,0 +1,12 @@
+Ledger statement
+
+"Date","Account","Narration","DR  ","CR   ","Balance   ",
+"Opening Balance","","","18805942","0","",
+"2026-03-21","Airtel Money","Services close day posting","400000","0","19205942",
+"2026-03-22","Airtel Money","full payment for accommodation  ","224000","0","19429942",
+"2026-03-23","Airtel Money","CONTRA","0","3700000","15729942",
+"2026-03-24","Airtel Money","Main Restaurant POS close day posting","75000","0","15804942",
+"2026-03-24","Airtel Money","Garden Bar POS close day posting","30000","0","15834942",
+"2026-03-24","Airtel Money","Services close day posting","40000","0","15874942",
+"2026-03-26","Airtel Money","partial payment for accommodation for 7 pax for 5 rooms ","300000","0","16174942",
+"Total"," "," ","19874942;","3700000;","",

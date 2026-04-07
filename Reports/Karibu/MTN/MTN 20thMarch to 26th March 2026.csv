@@ -1,0 +1,15 @@
+Ledger statement
+
+"Date","Account","Narration","DR  ","CR   ","Balance   ",
+"Opening Balance","","","26478696.5","0","",
+"2026-03-20","MTN Money","Main Restaurant POS close day posting","90000","0","26568696.5",
+"2026-03-20","MTN Money","Garden Bar POS close day posting","15000","0","26583696.5",
+"2026-03-22","MTN Money","Main Restaurant POS close day posting","240000","0","26823696.5",
+"2026-03-22","MTN Money","Garden Bar POS close day posting","120000","0","26943696.5",
+"2026-03-22","MTN Money","Services close day posting","45000","0","26988696.5",
+"2026-03-23","MTN Money","CONTRA","0","4300000","22688696.5",
+"2026-03-24","MTN Money","","10000","0","22698696.5",
+"2026-03-24","MTN Money","","30000","0","22728696.5",
+"2026-03-24","MTN Money","Main Restaurant POS close day posting","165000","0","22893696.5",
+"2026-03-24","MTN Money","Garden Bar POS close day posting","11000","0","22904696.5",
+"Total"," "," ","27204696.5;","4300000;","",
