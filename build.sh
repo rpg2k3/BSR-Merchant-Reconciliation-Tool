@@ -11,8 +11,8 @@ python3 --version || { echo "ERROR: Python3 not found"; exit 1; }
 
 # 2. Install/upgrade dependencies
 echo "> Installing dependencies..."
-pip install pyqt6 pandas openpyxl numpy anthropic pyinstaller --quiet --break-system-packages 2>/dev/null \
-  || pip install pyqt6 pandas openpyxl numpy anthropic pyinstaller --quiet
+pip install pyqt6 pandas openpyxl numpy anthropic pyyaml pyinstaller --quiet --break-system-packages 2>/dev/null \
+  || pip install pyqt6 pandas openpyxl numpy anthropic pyyaml pyinstaller --quiet
 
 # 3. Clean previous build
 echo "> Cleaning previous build..."

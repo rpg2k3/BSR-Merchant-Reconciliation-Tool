@@ -11,6 +11,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('assets', 'assets'),
+        ('config', 'config'),
     ],
     hiddenimports=[
         'PyQt6.QtWidgets',
@@ -47,6 +48,14 @@ a = Analysis(
         'core.anomalies',
         'core.ai_analyst',
         'core.file_detector',
+        'config',
+        'parsers',
+        'parsers.types',
+        'parsers.karibu_ledger_csv',
+        'parsers.mtn_merchant_csv',
+        'parsers.airtel_merchant_csv',
+        'parsers.momo_agent_xlsx',
+        'yaml',
         'ui',
         'ui.main_window',
         'ui.settings_dialog',

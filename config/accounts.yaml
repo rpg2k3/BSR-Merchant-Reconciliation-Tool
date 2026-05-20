@@ -1,0 +1,52 @@
+# BSR Reconciliation Tool — account registry.
+#
+# Adding a new account = appending an entry here + (if its statement format is
+# new) writing one parser module under `parsers/`. Folder names under
+# ~/.local/share/BSR_Recon/ match the account name on the line above exactly.
+#
+# Optional `legacy_folder` records the pre-rename short name used by the
+# pre-Phase-2 layout. Startup bootstrap skips accounts whose legacy folder
+# still exists, so we don't end up with both `Transactions/MTN/` and
+# `Transactions/MTN Merchant/` side by side until the Phase 2 migration runs.
+
+accounts:
+  "MTN Merchant":
+    karibu_account: "MTN Money"
+    statement_parser: mtn_merchant_csv
+    karibu_parser: karibu_ledger_csv
+    matching:
+      date_window_days: 2
+      lumpsum_window_days: 1
+      amount_tolerance_ugx: 0
+    legacy_folder: "MTN"
+    notes: |
+      Existing flow — preserve current behaviour exactly through Phase 2.
+      Phase 2 migration renames Transactions/MTN/ → Transactions/MTN Merchant/
+      and splits the flat Statements xlsx into yearly workbooks.
+
+  "Airtel Merchant":
+    karibu_account: "Airtel Money"
+    statement_parser: airtel_merchant_csv
+    karibu_parser: karibu_ledger_csv
+    matching:
+      date_window_days: 2
+      lumpsum_window_days: 1
+      amount_tolerance_ugx: 0
+    legacy_folder: "Airtel"
+
+  "Petty Cash UGX":
+    karibu_account: "PC - Petty Cash UGX"
+    statement_parser: momo_agent_xlsx
+    karibu_parser: karibu_ledger_csv
+    matching:
+      date_window_days: 2
+      lumpsum_window_days: 2
+      amount_tolerance_ugx: 0
+    karibu_only_is_normal: true
+    notes: |
+      Karibu DR = inflow to petty cash (cash-ins on agent line).
+      Karibu CR = outflows / expenses.
+      Statement: MoMo Agent transactions — CASH_IN, TRANSFER, DEPOSIT.
+      Not every Karibu entry will have a MoMo line (some petty cash moves are
+      pure cash); flag those as "Not in Statement" with the soft audit flag
+      PETTY_CASH_NO_STATEMENT_EXPECTED — do NOT escalate.
