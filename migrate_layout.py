@@ -41,6 +41,8 @@ The script never deletes user data. The only delete is the empty
 
 from __future__ import annotations
 
+import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -52,7 +54,20 @@ if str(REPO_ROOT) not in sys.path:
 
 from config import bootstrap_folders, load_accounts
 from consolidator import consolidate_account
-from core.config import WORKING_DIR
+
+
+# Canonical runtime data directory per BUILD_PLAN §5. We resolve it here
+# explicitly — NOT via core.config.WORKING_DIR — because WORKING_DIR has a
+# frozen-vs-source fork that returns the repo root when running from
+# source. The migration is a one-shot on the user's live data, so it must
+# always target the XDG dir regardless of how it's invoked.
+def _resolve_default_base() -> Path:
+    return Path(os.environ.get(
+        "XDG_DATA_HOME", Path.home() / ".local" / "share"
+    )) / "BSR_Recon"
+
+
+DEFAULT_DATA_DIR = _resolve_default_base()
 
 
 # (legacy_folder, display_name) under each top-level folder.
@@ -71,10 +86,15 @@ def migrate(base_dir: Path | None = None, *, run_consolidator: bool = True,
             log=print) -> dict:
     """Run the migration. Returns a small dict of stats / actions taken.
 
+    `base_dir` is required to be the canonical XDG data directory in
+    production use; pass an explicit path in tests. If omitted, falls
+    back to `DEFAULT_DATA_DIR` (resolved at import time, never
+    `core.config.WORKING_DIR`).
+
     `run_consolidator=False` skips step 4; useful for tests that don't
     want a heavy operation in tmp_path.
     """
-    base = Path(base_dir) if base_dir else WORKING_DIR
+    base = Path(base_dir) if base_dir else DEFAULT_DATA_DIR
     actions: dict[str, list[str]] = {
         "renamed_folders": [],
         "preserved_flat_files": [],
@@ -183,9 +203,21 @@ def migrate(base_dir: Path | None = None, *, run_consolidator: bool = True,
     return actions
 
 
-def main(argv: list[str] | None = None) -> int:
-    print(f"BSR_Recon migration — base: {WORKING_DIR}")
-    actions = migrate()
+def main(argv: list[str] | None = None, *, base_dir: Path | None = None) -> int:
+    parser = argparse.ArgumentParser(description="One-shot BSR_Recon layout migration.")
+    parser.add_argument(
+        "--base", type=Path, default=None,
+        help=f"Data directory to migrate (default: {DEFAULT_DATA_DIR}).",
+    )
+    args = parser.parse_args(argv)
+    resolved = base_dir or args.base or DEFAULT_DATA_DIR
+
+    print(f"BSR_Recon migration — base: {resolved}")
+    if not resolved.exists():
+        print(f"  ! Base directory does not exist: {resolved}")
+        print(f"  ! Create it first, or pass --base <path> to target a different directory.")
+        return 2
+    actions = migrate(resolved)
     print()
     print("Summary:")
     print(f"  Folders renamed:       {len(actions['renamed_folders'])}")

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
-from migrate_layout import migrate
+import pytest
+
+import migrate_layout
+from consolidator import consolidate_account
+from migrate_layout import DEFAULT_DATA_DIR, migrate
 
 
 def _seed_legacy_layout(base: Path) -> None:
@@ -82,3 +87,60 @@ def test_migration_keeps_nonempty_backups(tmp_path: Path):
     assert (tmp_path / "Backups").is_dir(), "Non-empty Backups/ must be preserved"
     assert actions["backups_removed"] is False
     assert any("not empty" in s for s in actions["skipped"])
+
+
+# ---- Regression: hotfix for the "migration targeted repo root" incident ----
+
+def test_default_data_dir_is_xdg(monkeypatch, tmp_path: Path):
+    """`DEFAULT_DATA_DIR` (and `_resolve_default_base()`) must resolve to
+    `$XDG_DATA_HOME/BSR_Recon` — or `~/.local/share/BSR_Recon/` when
+    `XDG_DATA_HOME` is unset. Never to the repo root.
+    """
+    # When XDG_DATA_HOME is unset, default falls back to ~/.local/share.
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    expected = Path.home() / ".local" / "share" / "BSR_Recon"
+    assert migrate_layout._resolve_default_base() == expected
+
+    # When XDG_DATA_HOME is set, it must be honoured.
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    assert migrate_layout._resolve_default_base() == tmp_path / "xdg" / "BSR_Recon"
+
+
+def test_migration_does_not_import_working_dir():
+    """The migration module must NOT depend on `core.config.WORKING_DIR`,
+    which has a frozen-vs-source fork that returns the repo root when
+    running from source. This was the bug that made the first migration
+    target the wrong directory."""
+    # Comments and docstrings may still reference the name for context;
+    # what matters is that the symbol is not actually bound at runtime.
+    assert not hasattr(migrate_layout, "WORKING_DIR"), (
+        "migrate_layout must not import core.config.WORKING_DIR — "
+        "use DEFAULT_DATA_DIR (XDG-resolved) or the explicit base_dir arg."
+    )
+
+
+def test_migrate_uses_explicit_base_dir_not_xdg(tmp_path: Path, monkeypatch):
+    """`migrate(tmp_path, ...)` must operate strictly inside tmp_path and
+    must never write to or read from XDG."""
+    _seed_legacy_layout(tmp_path)
+
+    # Make XDG_DATA_HOME point somewhere we control, and assert nothing
+    # under it gets created.
+    xdg = tmp_path / "should_not_be_touched_xdg"
+    monkeypatch.setenv("XDG_DATA_HOME", str(xdg))
+
+    migrate(tmp_path, run_consolidator=False, log=lambda *_: None)
+
+    assert not xdg.exists(), "migrate must not touch XDG when given an explicit base_dir"
+
+
+def test_consolidate_account_requires_base_dir():
+    """`consolidate_account` must require `base_dir` to be passed
+    explicitly — no fallback to a module-level constant."""
+    sig = inspect.signature(consolidate_account)
+    assert "base_dir" in sig.parameters, "consolidate_account must accept base_dir"
+    param = sig.parameters["base_dir"]
+    assert param.default is inspect.Parameter.empty, (
+        "base_dir must have no default — every caller must pass the path "
+        "explicitly so the migration can't silently target the wrong tree."
+    )

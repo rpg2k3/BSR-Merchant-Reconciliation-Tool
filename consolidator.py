@@ -27,6 +27,7 @@ import calendar
 import hashlib
 import json
 import logging
+import re
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -375,12 +376,29 @@ def _pin_workbook_metadata(wb) -> None:
 # with all entry timestamps pinned to _FIXED_ZIP_TS.
 _FIXED_ZIP_TS = (2024, 1, 1, 0, 0, 0)
 
+# openpyxl ALSO writes a wall-clock timestamp into docProps/core.xml as
+# `<dcterms:modified>` at save() time, overriding `props.modified`. We
+# rewrite both `dcterms:created` and `dcterms:modified` to a fixed value
+# so the file is byte-identical regardless of when it was generated.
+_FIXED_CORE_XML_TS = b"2024-01-01T00:00:00Z"
+_CORE_TIMESTAMP_RE = re.compile(
+    rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)"
+)
+
+
+def _normalize_core_xml(data: bytes) -> bytes:
+    return _CORE_TIMESTAMP_RE.sub(
+        rb"\g<1>" + _FIXED_CORE_XML_TS + rb"\g<2>", data
+    )
+
 
 def _pin_zip_member_timestamps(path: Path) -> None:
     with zipfile.ZipFile(path, "r") as src:
         members = [(info, src.read(info.filename)) for info in src.infolist()]
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as dst:
         for info, data in members:
+            if info.filename == "docProps/core.xml":
+                data = _normalize_core_xml(data)
             new_info = zipfile.ZipInfo(filename=info.filename, date_time=_FIXED_ZIP_TS)
             new_info.compress_type = info.compress_type
             new_info.external_attr = info.external_attr
