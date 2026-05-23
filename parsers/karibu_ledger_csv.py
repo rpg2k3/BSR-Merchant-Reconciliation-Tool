@@ -1,7 +1,12 @@
 """Karibu HMS ledger CSV parser.
 
-Wraps `core.parsers.parse_karibu_csv` so the legacy reconciler keeps working
-unchanged while the new pluggable pipeline gets a `NormalizedRecord` view.
+Reads the raw export, format-tolerantly parses each row's date, and emits
+NormalizedRecord rows. Rows with no parseable date are emitted with
+`audit_flag = UNPARSEABLE_DATE` rather than dropped (Joash, 2026-05-20).
+
+The legacy `core.parsers.parse_karibu_csv` is intentionally NOT used here —
+it silently coerces bad dates to NaT and then drops them, which is the
+class of behaviour BUGFIX.md addresses.
 """
 
 from __future__ import annotations
@@ -11,70 +16,113 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.parsers import parse_karibu_csv
-from parsers.types import DIRECTION_IN, DIRECTION_OUT, NormalizedRecord
+from parsers._dates import parse_date
+from parsers.types import (
+    AUDIT_UNPARSEABLE_DATE,
+    DIRECTION_IN,
+    DIRECTION_OUT,
+    NormalizedRecord,
+)
+
+
+# Karibu export uses a single canonical format, but we still go through
+# parse_date so anything weird falls through to permissive parsing instead
+# of silently NaT'ing.
+_KARIBU_DATE_FORMATS = ("%Y-%m-%d",)
 
 
 def parse(path: Path, karibu_account: str | None = None) -> list[NormalizedRecord]:
     """Parse a Karibu ledger CSV into NormalizedRecord rows.
 
     If `karibu_account` is given, only rows whose `Account` matches exactly
-    are returned. DR rows become direction=IN, CR rows become direction=OUT.
-    Rows with both DR=0 and CR=0 are skipped (the parser already strips
-    Opening Balance and rows with unparseable dates).
-    """
-    df = parse_karibu_csv(Path(path))
-    if karibu_account is not None and "Account" in df.columns:
-        df = df[df["Account"].astype(str).str.strip() == karibu_account].copy()
+    are emitted (e.g. `"PC - Petty Cash UGX"`).
 
-    source = Path(path).name
+    Rows skipped silently (structural noise, no reconciliation signal):
+      - Opening Balance marker (Date column literally reads "Opening Balance")
+      - Trailing Totals row (Date == "Total" or similar)
+      - Both DR and CR are 0
+    """
+    p = Path(path)
+    df = pd.read_csv(p, skiprows=2, dtype=str, quotechar='"')
+    df.columns = df.columns.str.strip()
+    source = p.name
+
+    if "Date" not in df.columns:
+        return []
+
     records: list[NormalizedRecord] = []
-    for _, row in df.iterrows():
-        dr = _to_decimal(row.get("DR", 0))
-        cr = _to_decimal(row.get("CR", 0))
-        date = row.get("Date")
-        if pd.isna(date):
+    for idx, row in df.iterrows():
+        date_raw = row.get("Date")
+        date_str = str(date_raw).strip() if pd.notna(date_raw) else ""
+        # Drop structural markers — they're not real ledger entries.
+        if not date_str or date_str.lower() in {"opening balance", "total", "totals"}:
             continue
-        date = pd.Timestamp(date).to_pydatetime()
-        narration = str(row.get("Narration") or "").strip()
-        account = str(row.get("Account") or "").strip()
+
+        account = _stripped(row.get("Account"))
+        if karibu_account is not None and account != karibu_account:
+            continue
+
+        dr = _to_decimal(row.get("DR"))
+        cr = _to_decimal(row.get("CR"))
+        if dr == 0 and cr == 0:
+            continue
+
+        date_val, flag = parse_date(
+            date_str, _KARIBU_DATE_FORMATS,
+            source_file=source, row_index=int(idx), field_name="Date",
+        )
 
         if dr > 0:
             direction = DIRECTION_IN
             amount = dr
             txn_type = "DR"
-        elif cr > 0:
+        else:
             direction = DIRECTION_OUT
             amount = cr
             txn_type = "CR"
-        else:
-            # Zero-value Karibu rows carry no reconciliation signal.
-            continue
 
+        narration = _stripped(row.get("Narration"))
         records.append(NormalizedRecord(
             source_file=source,
-            date=date,
+            date=date_val,
             txn_id="",
             amount=amount,
             direction=direction,
             counterparty=narration,
             txn_type=txn_type,
             raw={
-                "Date": date.isoformat(),
+                "Date": date_str,
                 "Account": account,
                 "Narration": narration,
                 "DR": str(dr),
                 "CR": str(cr),
-                "Balance": str(row.get("Balance", "")),
+                "Balance": _stripped(row.get("Balance")),
             },
+            audit_flag=flag,
         ))
     return records
 
 
 def _to_decimal(value) -> Decimal:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if value is None:
         return Decimal(0)
+    try:
+        if pd.isna(value):
+            return Decimal(0)
+    except (TypeError, ValueError):
+        pass
     try:
         return Decimal(str(value).replace(",", "").strip() or "0")
     except (InvalidOperation, ValueError):
         return Decimal(0)
+
+
+def _stripped(value) -> str:
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip()

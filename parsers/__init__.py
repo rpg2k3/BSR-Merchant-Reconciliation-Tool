@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Callable
 
 from parsers.types import (
+    AUDIT_UNPARSEABLE_DATE,
     DIRECTION_IN,
     DIRECTION_OUT,
     NormalizedRecord,
@@ -63,6 +64,7 @@ __all__ = [
     "NormalizedRecord",
     "DIRECTION_IN",
     "DIRECTION_OUT",
+    "AUDIT_UNPARSEABLE_DATE",
     "get_parser",
     "available_parsers",
 ]

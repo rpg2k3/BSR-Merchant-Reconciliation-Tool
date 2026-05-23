@@ -1,7 +1,9 @@
 """MTN Merchant portal CSV parser.
 
-Wraps `core.parsers.parse_mtn_csv` and emits NormalizedRecord rows.
-Positive Amount → IN (merchant receipt); negative Amount → OUT (contra).
+Reads the raw export, format-tolerantly parses each row's date, and emits
+NormalizedRecord rows. Positive Amount → IN (merchant receipt); negative
+Amount → OUT (contra). Rows with unparseable dates pass through tagged
+with `audit_flag = UNPARSEABLE_DATE` (Joash, 2026-05-20).
 """
 
 from __future__ import annotations
@@ -11,46 +13,78 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.parsers import parse_mtn_csv
+from parsers._dates import parse_date
 from parsers.types import DIRECTION_IN, DIRECTION_OUT, NormalizedRecord
 
 
+# The MTN portal has historically exported `YYYY-MM-DD HH:MM:SS` (verified
+# 2026-05-20 across oldest March and newest May files in production data).
+# Any other format falls through to permissive parsing.
+_MTN_DATE_FORMATS = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d")
+
+
 def parse(path: Path) -> list[NormalizedRecord]:
-    df = parse_mtn_csv(Path(path))
-    source = Path(path).name
+    p = Path(path)
+    df = pd.read_csv(p, dtype={"Id": str})
+    source = p.name
+
     records: list[NormalizedRecord] = []
-    for _, row in df.iterrows():
-        date = row.get("Date")
-        amount_raw = row.get("Amount")
-        if pd.isna(date) or pd.isna(amount_raw):
-            continue
-        amount = _to_decimal(amount_raw)
+    for idx, row in df.iterrows():
+        amount = _to_decimal(row.get("Amount"))
         if amount == 0:
             continue
+
+        date_val, flag = parse_date(
+            row.get("Date"), _MTN_DATE_FORMATS,
+            source_file=source, row_index=int(idx), field_name="Date",
+        )
+
         direction = DIRECTION_IN if amount > 0 else DIRECTION_OUT
         records.append(NormalizedRecord(
             source_file=source,
-            date=pd.Timestamp(date).to_pydatetime(),
-            txn_id=str(row.get("Id") or "").strip(),
+            date=date_val,
+            txn_id=_stripped(row.get("Id")),
             amount=abs(amount),
             direction=direction,
-            counterparty=str(row.get("From name") or "").strip(),
-            txn_type=str(row.get("Status") or "").strip(),
+            counterparty=_stripped(row.get("From name")),
+            txn_type=_stripped(row.get("Status")),
             raw={k: _stringify(v) for k, v in row.items()},
+            audit_flag=flag,
         ))
     return records
 
 
 def _to_decimal(value) -> Decimal:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if value is None:
         return Decimal(0)
+    try:
+        if pd.isna(value):
+            return Decimal(0)
+    except (TypeError, ValueError):
+        pass
     try:
         return Decimal(str(value).replace(",", "").strip() or "0")
     except (InvalidOperation, ValueError):
         return Decimal(0)
 
 
-def _stringify(value):
-    if pd.isna(value):
+def _stripped(value) -> str:
+    if value is None:
         return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip()
+
+
+def _stringify(value):
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
     return str(value)

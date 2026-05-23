@@ -5,6 +5,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
 from openpyxl.utils import get_column_letter
 import pandas as pd
 
+from utils.safe_write import check_xlsx_lock
+
 # ---------------------------------------------------------------------------
 # Color constants
 # ---------------------------------------------------------------------------
@@ -101,6 +103,7 @@ def write_airtel_statement(df: pd.DataFrame, file_path, banner_text: str):
 
 def _write_statement(df: pd.DataFrame, file_path, banner_text: str, sheet_name: str, channel: str):
     """Generic statement writer."""
+    check_xlsx_lock(file_path)
     wb = Workbook()
     ws = wb.active
     ws.title = sheet_name
@@ -169,6 +172,7 @@ def write_reconciliation(
     channel: str,
 ):
     """Write reconciliation workbook with Karibu Report, Merchant Statement, and Dashboard sheets."""
+    check_xlsx_lock(file_path)
     wb = Workbook()
 
     # Sheet 1: Karibu Report
