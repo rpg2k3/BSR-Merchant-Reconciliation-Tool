@@ -297,11 +297,18 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 - `BSR_Recon.spec` and `build.sh` updated for `config/`, `parsers/*`, `pyyaml`.
 - `samples/` data files intentionally untracked until Phase 5 sets up git-crypt.
 
-### Phase 2 — Consolidator + fix April 6 bug ▶ in progress
-- Build `consolidator.py` per §6.
-- Investigate and fix the April-6-stuck bug. Document the root cause in `BUGFIX.md`.
-- Add the new folder layout under `~/.local/share/BSR_Recon/`. Provide a one-shot migration script `migrate_layout.py` to move any existing files into the new structure.
-- Acceptance: dropping the May sample files into `Transactions/Petty Cash UGX/` and running consolidate produces `Statements/Petty Cash UGX/Petty Cash UGX Transactions - 2026.xlsx` with all March–May data and correct monthly sheets. Re-running produces no duplicates and no diff.
+### Phase 2 — Consolidator + fix April 6 bug ✅ done — commit `670cf85`, hotfix `d0db531`
+- Built `consolidator.py` per §6: rebuilds yearly per-month workbooks from raw source files on every run; byte-identical re-run guaranteed (pinned workbook metadata, pinned zip member timestamps, pinned `docProps/core.xml` `dcterms:created/modified`).
+- Format-tolerant date parsing in `parsers/_dates.py`: tries explicit formats → pandas → dateutil; on total failure logs WARNING and returns `(None, AUDIT_UNPARSEABLE_DATE)` instead of silent NaT coercion. All four parsers route through it. Unparseable rows flow through with `date=None + audit_flag="UNPARSEABLE_DATE"` and are surfaced on a separate `Unparseable` sheet in the latest year's workbook (omitted entirely when zero rows).
+- April-6 NaT bug: root cause documented in `BUGFIX.md`. Structurally eliminated — the consolidator never merges against a previous output, so stale NaT baselines have no way to persist.
+- `utils/safe_write.py` pre-write check for LibreOffice `.~lock.<name>#` sibling files.
+- `migrate_layout.py` one-shot script: renames `MTN/Airtel` → `MTN Merchant/Airtel Merchant` under `Transactions/` and `Reports/Karibu/`, preserves legacy flat xlsx as `*_pre_migration.xlsx`, bootstraps new folders, runs the consolidator for every configured account, removes empty `Backups/`. Idempotent; refuses to merge when both legacy and target folders exist.
+- **Hotfix** (`d0db531`): the initial migrate_layout imported `core.config.WORKING_DIR`, which has a frozen-vs-source fork that resolves to the repo root when running from source. The first migration run targeted the wrong directory as a result. Fixed by defining a self-contained `DEFAULT_DATA_DIR` via `XDG_DATA_HOME`-respecting resolution (falling back to `~/.local/share/BSR_Recon/`), passing the canonical XDG path through every downstream call, and adding regression tests that assert the migration never imports `WORKING_DIR` and that `consolidate_account` has no default for its `base_dir` arg.
+- 19 new pytest tests (37 total, all passing): consolidator (byte-identical re-run, monthly sheet layout, Unparseable routing, NaT-baseline recovery, dedupe semantics), migration (rename + preserve + idempotency + double-folder safety + XDG-resolution regressions), safe_write (lock check).
+
+**Migration outcome (live data run 2026-05-23):** 9 workbooks across 3 accounts, 2,527 rows total, **zero unparseable dates**. April-6 Airtel NaT bug confirmed fixed — 32 previously-NaT rows recovered with correct dates; new `Airtel Merchant Transactions - 2026.xlsx` covers 2026-03-21 → 2026-05-15 with zero NULL-date rows.
+
+> **Karibu coverage gap (action needed):** the latest Karibu exports under `Reports/Karibu/MTN Merchant/` and `Reports/Karibu/Airtel Merchant/` only run through **2026-04-06**. Phase 3 reconciliation for MTN Merchant and Airtel Merchant will be limited to that window until fresh Karibu exports covering April 7 → today are dropped into those folders. Petty Cash UGX Karibu coverage is up to date (through 2026-05-18).
 
 ### Phase 3 — Petty Cash UGX end-to-end
 - Build `parsers/momo_agent_xlsx.py` per §5.
@@ -360,3 +367,5 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 | Commit  | Phase | Description |
 |---------|-------|-------------|
 | `9cff7d3` | 1 ✅  | Extract parsers into pluggable package + accounts.yaml |
+| `670cf85` | 2 ✅  | Consolidator + migration + safe_write + UNPARSEABLE_DATE handling |
+| `d0db531` | 2 ✅  | Hotfix: migrate_layout uses canonical XDG path regardless of invocation |
