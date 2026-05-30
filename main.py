@@ -11,6 +11,8 @@ Dependencies: pip install pyqt6 pandas openpyxl numpy anthropic
 
 import sys
 import os
+import logging
+from datetime import datetime
 
 # Ensure the package directory is in the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -18,31 +20,44 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtGui import QFont, QPalette, QColor
 
-from core.config import WORKING_DIR, ensure_folders
+from core.config import ensure_folders
+import app_paths
 from ui.main_window import MainWindow
 
 
-def _bootstrap_accounts():
-    """Create per-account folders for any account whose legacy folder is gone.
+def _setup_run_logging():
+    """Mirror pipeline logs to {DATA_DIR}/logs/{YYYY-MM-DD}_run.log (BUILD_PLAN §12)."""
+    log_dir = app_paths.logs_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"{datetime.now():%Y-%m-%d}_run.log"
+    handler = logging.FileHandler(log_path, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    root = logging.getLogger("bsr_recon")
+    root.setLevel(logging.INFO)
+    # Avoid stacking duplicate handlers across re-launches in the same process.
+    if not any(isinstance(h, logging.FileHandler) for h in root.handlers):
+        root.addHandler(handler)
 
-    Phase 1: only Petty Cash UGX (no legacy folder) gets bootstrapped here.
-    MTN Merchant / Airtel Merchant are skipped because their legacy
-    `Transactions/{MTN,Airtel}/` folders are still in use until the Phase 2
-    migration renames them.
+
+def _bootstrap_accounts():
+    """Create the four runtime folders for every configured account.
+
+    Phase 2's migration renamed the legacy `Transactions/{MTN,Airtel}/`
+    folders, so `should_bootstrap` now passes for MTN/Airtel Merchant too.
+    Bootstrap runs against the canonical XDG data dir (app_paths.DATA_DIR) —
+    NOT core.config.WORKING_DIR, which resolves to the repo root from source.
     """
     try:
         from config import bootstrap_folders, load_accounts, should_bootstrap
     except Exception:
-        # Don't block startup if the new config package fails to import — the
-        # legacy MTN/Airtel flow lives entirely on core.config and is fine.
         return
     try:
         accounts = load_accounts()
     except Exception:
         return
     for account in accounts.values():
-        if should_bootstrap(account, WORKING_DIR):
-            bootstrap_folders(account.name, WORKING_DIR)
+        if should_bootstrap(account, app_paths.DATA_DIR):
+            bootstrap_folders(account.name, app_paths.DATA_DIR)
 
 
 def main():
@@ -75,6 +90,7 @@ def main():
 
     # Create data folders on first launch
     ensure_folders()
+    _setup_run_logging()
     _bootstrap_accounts()
 
     window = MainWindow()
