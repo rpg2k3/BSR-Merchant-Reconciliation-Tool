@@ -8,6 +8,20 @@
 # pre-Phase-2 layout. Startup bootstrap skips accounts whose legacy folder
 # still exists, so we don't end up with both `Transactions/MTN/` and
 # `Transactions/MTN Merchant/` side by side until the Phase 2 migration runs.
+#
+# Per-account `matching` knobs consumed by the Phase 3 reconciler:
+#   date_window_days     — window for exact-match passes 1-3+ AND K→S lumpsum
+#                          (pass 5). Default 2.
+#   lumpsum_window_days  — window for S→K lumpsum (pass 6) only. Legacy
+#                          hard-coded this to 0; the asymmetry is preserved.
+#   amount_tolerance_ugx — absolute tolerance for amount comparisons. Use 0.5
+#                          to match legacy rounding behaviour; do NOT set to 0
+#                          unless you know matches will rely on exact equality.
+#
+# `match_outflows` (top-level, default false): when true, the engine runs a
+# second pass over (Karibu CR ↔ statement OUT) so outflow reconciliation
+# works. Required for Petty Cash UGX where MoMo TRANSFER rows are real
+# expenses. MTN/Airtel keep the legacy single-direction behaviour (DR↔IN only).
 
 accounts:
   "MTN Merchant":
@@ -16,8 +30,9 @@ accounts:
     karibu_parser: karibu_ledger_csv
     matching:
       date_window_days: 2
-      lumpsum_window_days: 1
-      amount_tolerance_ugx: 0
+      lumpsum_window_days: 0
+      amount_tolerance_ugx: 0.5
+    match_outflows: false
     legacy_folder: "MTN"
     notes: |
       Existing flow — preserve current behaviour exactly through Phase 2.
@@ -30,8 +45,9 @@ accounts:
     karibu_parser: karibu_ledger_csv
     matching:
       date_window_days: 2
-      lumpsum_window_days: 1
-      amount_tolerance_ugx: 0
+      lumpsum_window_days: 0
+      amount_tolerance_ugx: 0.5
+    match_outflows: false
     legacy_folder: "Airtel"
 
   "Petty Cash UGX":
@@ -41,8 +57,9 @@ accounts:
     matching:
       date_window_days: 2
       lumpsum_window_days: 2
-      amount_tolerance_ugx: 0
+      amount_tolerance_ugx: 0.5
     karibu_only_is_normal: true
+    match_outflows: true
     notes: |
       Karibu DR = inflow to petty cash (cash-ins on agent line).
       Karibu CR = outflows / expenses.
@@ -50,3 +67,5 @@ accounts:
       Not every Karibu entry will have a MoMo line (some petty cash moves are
       pure cash); flag those as "Not in Statement" with the soft audit flag
       PETTY_CASH_NO_STATEMENT_EXPECTED — do NOT escalate.
+      match_outflows=true so the 7-pass engine also reconciles outflows
+      (Karibu CR ↔ statement OUT/TRANSFER rows).

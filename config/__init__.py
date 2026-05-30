@@ -34,6 +34,7 @@ class AccountConfig:
     matching: dict[str, Any] = field(default_factory=dict)
     legacy_folder: str | None = None
     karibu_only_is_normal: bool = False
+    match_outflows: bool = False
     notes: str = ""
 
 
@@ -56,6 +57,7 @@ def load_accounts(yaml_path: Path | None = None) -> dict[str, AccountConfig]:
             matching=dict(entry.get("matching") or {}),
             legacy_folder=entry.get("legacy_folder"),
             karibu_only_is_normal=bool(entry.get("karibu_only_is_normal", False)),
+            match_outflows=bool(entry.get("match_outflows", False)),
             notes=str(entry.get("notes") or "").strip(),
         )
     return result
