@@ -310,11 +310,36 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 
 > **Karibu coverage gap (action needed):** the latest Karibu exports under `Reports/Karibu/MTN Merchant/` and `Reports/Karibu/Airtel Merchant/` only run through **2026-04-06**. Phase 3 reconciliation for MTN Merchant and Airtel Merchant will be limited to that window until fresh Karibu exports covering April 7 → today are dropped into those folders. Petty Cash UGX Karibu coverage is up to date (through 2026-05-18).
 
-### Phase 3 — Petty Cash UGX end-to-end
-- Build `parsers/momo_agent_xlsx.py` per §5.
-- Populate the `Petty Cash UGX` entry in `accounts.yaml`.
-- Build `reconciler.py` per §7 (or refactor existing reconciliation code into it).
-- Acceptance: running the full pipeline for Petty Cash UGX produces `Reconciliation/Petty Cash UGX/Petty Cash UGX Reconciliation - 2026.xlsx` with `Karibu Report`, `Statement`, and `Dashboard` sheets, BSR branding applied, audit flags populated, and the same column structure as the existing MTN reconciliation file.
+### Phase 3 — Petty Cash UGX end-to-end ✅ done — commit `7434e0c`
+- Built `reconciler/` package (split out of legacy `core/reconciler.py`):
+  `types.py` (ReconKnobs/ReconResult + flag constants + suppression matrix),
+  `loader.py` (reads consolidated yearly Karibu/statement workbooks),
+  `matching.py` (the 7-pass engine with bidirectional support),
+  `audit.py` (preserves every flag from `core/anomalies.py` verbatim +
+  Phase-3 suppression matrix), `writer.py` (three-sheet output with BSR
+  branding + comment preservation), `__init__.py` (driver).
+- Matching engine: passes 1-3 are exact (100/90/80%), passes 4-5 lumpsum
+  K→S (60/45%), pass 6 lumpsum S→K (55%), pass 7 amount-only (40%).
+  Runs once over (Karibu DR ↔ statement IN); runs again over (Karibu CR
+  ↔ statement OUT) when `account.match_outflows: true`.
+- `config/accounts.yaml` knobs locked in: `amount_tolerance_ugx: 0.5` on
+  all three accounts; `lumpsum_window_days`: MTN/Airtel 0, Petty Cash 2;
+  `match_outflows`: MTN/Airtel false, Petty Cash true. `AccountConfig`
+  gains a `match_outflows: bool` field.
+- Suppression matrix: when `account.karibu_only_is_normal: true`,
+  unmatched Karibu rows get the soft `PETTY_CASH_NO_STATEMENT_EXPECTED`
+  flag and the hard-escalation flags (`UNMATCHED_HIGH_VALUE`,
+  `LARGE_SINGLE_PAYMENT`, `DATE_GAP`) are stripped. The remaining
+  observational flags (`DUPLICATE_AMOUNT_SAME_DAY`,
+  `KARIBU_ONLY_REPEATED_NARRATION`) still fire. Suppression covers both
+  DR-unmatched and CR-unmatched rows for accounts with `match_outflows: true`.
+- Tests: 82 passing (37 existing + 45 new across 7 reconciler test files).
+  The MTN parity test runs the legacy `core/reconciler.reconcile()` and
+  the new `reconcile_account()` on the same synthetic dataset and asserts
+  matched-Karibu counts agree within ±1; observed delta on commit = 0
+  (both engines report 6 matched out of 7 DR rows).
+- Sample data files (`samples/*.xlsx`, `*.csv`) intentionally remain
+  untracked until Phase 5 git-crypt.
 
 ### Phase 4 — UI updates
 - Restructure the PyQt6 UI per §8.
@@ -369,3 +394,4 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 | `9cff7d3` | 1 ✅  | Extract parsers into pluggable package + accounts.yaml |
 | `670cf85` | 2 ✅  | Consolidator + migration + safe_write + UNPARSEABLE_DATE handling |
 | `d0db531` | 2 ✅  | Hotfix: migrate_layout uses canonical XDG path regardless of invocation |
+| `7434e0c` | 3 ✅  | Reconciler package: matching + bidirectional + audit + writer |
