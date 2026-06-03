@@ -2,6 +2,12 @@
 
 Loads/saves settings from ~/.bsr_recon_config.json.
 WORKING_DIR resolves correctly both from source and as a PyInstaller executable.
+
+The runtime data directory honours the ``BSR_RECON_DATA_DIR`` environment
+variable (Phase 4.5). When set — e.g. pointing at a portable VeraCrypt SSD —
+it overrides every default. ``resolve_data_dir()`` is the *single* place that
+override is read; ``migrate_layout.DEFAULT_DATA_DIR`` routes through it too, so
+the canonical path definitions cannot diverge.
 """
 
 import json
@@ -9,8 +15,26 @@ import os
 import sys
 from pathlib import Path
 
+# Environment variable that overrides the runtime data directory everywhere.
+# Set this to relocate BSR_Recon's data onto a portable / encrypted drive.
+DATA_DIR_ENV_VAR = "BSR_RECON_DATA_DIR"
 
-def _get_base_dir() -> Path:
+
+def resolve_data_dir(default: Path) -> Path:
+    """Resolve the runtime data dir, honouring ``BSR_RECON_DATA_DIR``.
+
+    When the env var is set it wins over ``default`` (``~`` is expanded).
+    Otherwise ``default`` is returned unchanged. This is the single source of
+    truth for the override — both this module's ``WORKING_DIR`` and
+    ``migrate_layout.DEFAULT_DATA_DIR`` call it with their own default, so the
+    two never disagree about where an override points.
+    """
+    override = os.environ.get(DATA_DIR_ENV_VAR)
+    return Path(override).expanduser() if override else default
+
+
+def _default_working_dir() -> Path:
+    """Fallback data dir when ``BSR_RECON_DATA_DIR`` is unset (frozen vs source)."""
     if getattr(sys, "frozen", False):
         # Running as PyInstaller executable — use a user-writable data directory
         # so the app works without root even when installed to /opt
@@ -23,7 +47,7 @@ def _get_base_dir() -> Path:
         return Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-WORKING_DIR = _get_base_dir()
+WORKING_DIR = resolve_data_dir(_default_working_dir())
 
 # Named path constants for all data folders
 TRANSACTIONS_MTN = WORKING_DIR / "Transactions" / "MTN"

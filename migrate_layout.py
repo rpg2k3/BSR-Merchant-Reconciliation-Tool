@@ -55,19 +55,26 @@ if str(REPO_ROOT) not in sys.path:
 from config import bootstrap_folders, load_accounts
 from consolidator import consolidate_account
 
+# Pure env-override resolver only — NOT core.config.WORKING_DIR, which has a
+# frozen-vs-source fork that returns the repo root from source (the bug that
+# bit the first migration). `resolve_data_dir` just layers the
+# BSR_RECON_DATA_DIR override on top of whatever default we pass it, keeping
+# the override logic in one place (Phase 4.5).
+from core.config import resolve_data_dir
 
-# Canonical runtime data directory per BUILD_PLAN §5. We resolve it here
-# explicitly — NOT via core.config.WORKING_DIR — because WORKING_DIR has a
-# frozen-vs-source fork that returns the repo root when running from
-# source. The migration is a one-shot on the user's live data, so it must
-# always target the XDG dir regardless of how it's invoked.
+
+# Canonical runtime data directory per BUILD_PLAN §5. We resolve the XDG dir
+# explicitly here, then layer the BSR_RECON_DATA_DIR override on top via the
+# shared `resolve_data_dir`. The migration is a one-shot on the user's live
+# data, so without an override it must always target the XDG dir regardless of
+# how it's invoked.
 def _resolve_default_base() -> Path:
     return Path(os.environ.get(
         "XDG_DATA_HOME", Path.home() / ".local" / "share"
     )) / "BSR_Recon"
 
 
-DEFAULT_DATA_DIR = _resolve_default_base()
+DEFAULT_DATA_DIR = resolve_data_dir(_resolve_default_base())
 
 
 # (legacy_folder, display_name) under each top-level folder.

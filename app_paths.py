@@ -5,6 +5,10 @@ The single source of truth for the runtime data directory is
 (`~/.local/share/BSR_Recon/`) regardless of frozen-vs-source, which is the
 fork that bit the Phase 2 migration. The UI must drive the new pipeline off
 this, NOT `core.config.WORKING_DIR` (which returns the repo root from source).
+
+`DEFAULT_DATA_DIR` honours the `BSR_RECON_DATA_DIR` env-var override (Phase
+4.5) via `core.config.resolve_data_dir`, so `DATA_DIR` here automatically
+relocates with it (e.g. onto a portable VeraCrypt drive) — no extra wiring.
 """
 
 from __future__ import annotations
