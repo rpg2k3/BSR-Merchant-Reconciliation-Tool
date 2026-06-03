@@ -12,6 +12,8 @@ build/
 
 # Config with API keys
 .bsr_recon_config.json
+# Real secrets (Anthropic API key etc.) — only secrets.yaml.example is tracked.
+config/secrets.yaml
 
 # Real statement/ledger sample data — never goes to GitHub (Phase 5 repo
 # hygiene). At-rest protection is VeraCrypt full-disk encryption on the

@@ -40,11 +40,19 @@ def _momo_agent_xlsx():
     return momo_agent_xlsx.parse
 
 
+def _pdf_via_claude_api():
+    from parsers import pdf_via_claude_api
+    return pdf_via_claude_api.parse
+
+
 _REGISTRY: dict[str, Callable[..., Callable]] = {
     "karibu_ledger_csv": _karibu_ledger_csv,
     "mtn_merchant_csv": _mtn_merchant_csv,
     "airtel_merchant_csv": _airtel_merchant_csv,
     "momo_agent_xlsx": _momo_agent_xlsx,
+    # Deferred stub — discoverable but raises NotImplementedError until an
+    # Anthropic API key is configured. See docs/pdf_parser_plan.md.
+    "pdf_via_claude_api": _pdf_via_claude_api,
 }
 
 
