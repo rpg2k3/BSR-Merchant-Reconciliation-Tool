@@ -477,4 +477,4 @@ suite: **83 passing**.
 | `f9723c8` | cleanup | Remove legacy MTN/Airtel code paths and parity test |
 | `9bc44a1` | cleanup | Rescue match_outflows=False CR-omission test from deleted parity file |
 | `fcce14e` | cleanup | Remove final orphaned modules (ai_analyst, file_detector, anomalies, upload_worker) |
-| `27a208a` | docs | Document final orphan cleanup in BUILD_PLAN |
+| `93c9d1b` | docs | Document final orphan cleanup in BUILD_PLAN |
