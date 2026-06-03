@@ -25,6 +25,8 @@ The user (Joash, MD of BSR) now needs the tool to:
 4. **Output transaction-based reconciliation reports** — no dashboard fluff. The user's boss wants actionable correction lists, not summaries. (Keep the dashboard sheet but only as a thin summary; the value is in the per-transaction rows with Status + Audit Flag.)
 5. **Stay maintainable** so adding "Stanbic UGX" later is mostly: write a parser + add a config entry. Not: rewrite the app.
 
+> **Plan change (2026-06-03) — security strategy.** Phase 5 originally specified per-repo **git-crypt** encryption of `samples/` and data files. That has been **superseded**: the user's `BSR_Recon` working tree and its `samples/` live on an external SSD protected by **VeraCrypt full-disk encryption**, which covers the same threat model (laptop/drive theft) for *all* files at rest, not just repo blobs — without per-file key management or the risk of committing plaintext before the filter engages. New strategy: `samples/` is **git-ignored** so the real statement files never reach GitHub, and the VeraCrypt drive is the local at-rest protection. Phase 5 is rewritten accordingly; §9 (git-crypt setup) is retained below for history but is no longer the plan.
+
 ---
 
 ## 2. Known Bug to Fix (Phase 2 Blocker)
@@ -228,7 +230,9 @@ The current UI is around a single MTN/Airtel reconciliation flow. Restructure to
 
 ---
 
-## 9. Security — git-crypt Setup
+## 9. Security — git-crypt Setup (SUPERSEDED — see §1 plan change + Phase 5)
+
+> **Superseded 2026-06-03.** This git-crypt approach is no longer the plan. At-rest protection is now provided by **VeraCrypt full-disk encryption on the external SSD**, and `samples/` is git-ignored so real data never reaches GitHub. This section is kept for history only — do not execute it.
 
 The repo is being made private. Sensitive data files in this repo (sample statements, real reconciliation outputs if any are checked in) must be encrypted at rest on GitHub.
 
@@ -341,17 +345,44 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 - Sample data files (`samples/*.xlsx`, `*.csv`) intentionally remain
   untracked until Phase 5 git-crypt.
 
-### Phase 4 — UI updates
-- Restructure the PyQt6 UI per §8.
-- Add the "Add Account" wizard.
-- Background-thread the long-running operations.
-- Acceptance: user can select Petty Cash UGX in the UI, click `Consolidate`, click `Reconcile`, click `Open Output Folder`, and find the reconciliation file.
+### Phase 4 — UI updates ✅ done — commit `e5eaaec`
+- Restructured the PyQt6 UI per §8: two-pane accounts-driven `main_window`
+  backed by `config/accounts.yaml`, replacing the MTN/Airtel-hardcoded single
+  flow. `ui/accounts_panel.py` (status-dot table), `ui/account_detail.py`
+  (input file counts + streaming log + Consolidate / Reconcile / Open Output
+  Folder), top bar (Run All / Add Account / Settings).
+- Added the "Add Account" wizard (`ui/add_account_dialog.py`): append-only YAML
+  edit with re-parse validation + byte-offset rollback and duplicate/parser/
+  empty checks.
+- Background-threaded the long-running operations: `workers/pipeline_workers.py`
+  (`ConsolidateWorker`, `ReconcileWorker`, `RunAllWorker`) run on QThreads,
+  call the Phase 2/3 pipeline (`consolidator.consolidate_account`,
+  `reconciler.reconcile_account`), and propagate `status=="error"` so the panel
+  flips the status dot red. Legacy `core.updater`/`core.reconciler` are no
+  longer on the UI path (left in the tree as dead code).
+- `app_paths.py` centralises the XDG data dir + file-count / mtime /
+  reconcilable-year helpers; `main.py` bootstraps every account against the XDG
+  dir with per-run file logging to `{DATA_DIR}/logs/{date}_run.log`.
+- Acceptance met: user can select Petty Cash UGX in the UI, click `Consolidate`,
+  click `Reconcile`, click `Open Output Folder`, and find the reconciliation
+  file. Tests: 82 passing (no pipeline code touched).
 
-### Phase 5 — git-crypt + private repo
-- Run the git-crypt setup per §9.
-- Update README with cloning instructions.
-- Verify `git-crypt status` shows samples and any data files encrypted.
-- Acceptance: a fresh clone without the key shows encrypted blobs in `samples/`; unlocking with the key restores them.
+### Phase 5 — Repo hygiene (git-ignore samples/, VeraCrypt as the security strategy)
+> Replaces the original "git-crypt + private repo" plan — see the §1 plan
+> change. VeraCrypt full-disk encryption on the external SSD supersedes per-repo
+> git-crypt: it protects *every* file at rest (working tree, `samples/`, outputs)
+> against the real threat (drive/laptop theft) with no per-file key management.
+> `samples/` simply never goes to GitHub.
+- Append `samples/` to `.gitignore` so the three real sample files
+  (`Ledger_statement.csv`, `MoMo_Agent_Transaction_Report_*.xlsx`,
+  `BSR_MTN_Reconciliation.xlsx`) stay out of git permanently. They remain on the
+  local VeraCrypt drive for development/testing.
+- Document the security strategy: at-rest protection = VeraCrypt full-disk
+  encryption on the external SSD; GitHub holds code/docs/config only, no
+  statement data.
+- Acceptance: `git status` shows `samples/` as ignored (not untracked); a fresh
+  clone contains no statement data; the encrypted drive holds the samples
+  locally.
 
 ### Phase 6 — (Defer; do not build yet, just stub) Claude API for PDF parsing
 - Create `parsers/pdf_via_claude_api.py` as a stub that raises `NotImplementedError` with a clear message.
@@ -395,3 +426,4 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 | `670cf85` | 2 ✅  | Consolidator + migration + safe_write + UNPARSEABLE_DATE handling |
 | `d0db531` | 2 ✅  | Hotfix: migrate_layout uses canonical XDG path regardless of invocation |
 | `7434e0c` | 3 ✅  | Reconciler package: matching + bidirectional + audit + writer |
+| `e5eaaec` | 4 ✅  | UI rewire to new pipeline + accounts-driven main window |

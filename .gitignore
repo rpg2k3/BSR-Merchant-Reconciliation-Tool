@@ -13,6 +13,11 @@ build/
 # Config with API keys
 .bsr_recon_config.json
 
+# Real statement/ledger sample data — never goes to GitHub (Phase 5 repo
+# hygiene). At-rest protection is VeraCrypt full-disk encryption on the
+# external SSD; the samples live there for local dev/testing only.
+samples/
+
 # Keep these files
 !assets/icon.png
 !build.sh
