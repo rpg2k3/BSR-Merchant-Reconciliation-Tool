@@ -413,14 +413,27 @@ active importer). Removed:
   Granular `tests/test_reconciler_matching.py` covers ongoing matching-logic
   regressions; git history preserves the legacy engine if ever needed.
 
-`BSR_Recon.spec` hidden imports were updated to match (dropped the four deleted
+`BSR_Recon.spec` hidden imports were updated to match (dropped the deleted
 modules, added the live `workers.pipeline_workers` and `parsers.pdf_via_claude_api`).
-**Kept** `core/anomalies.py` — its audit-flag catalogue was copied verbatim into
-`reconciler/types.py` + `reconciler/audit.py` (the new code does not import it, so
-it is technically orphaned, but retained as the source-of-record for the flags).
 
-Net: ~1,877 lines removed. Test suite: **82 passing** (the deleted parity file
-held 2 tests — the legacy-parity test plus a `match_outflows=off` behaviour test).
+Net (first pass): ~1,877 lines removed. The deleted parity file held 2 tests —
+the legacy-parity test plus a `match_outflows=off` behaviour test; the latter
+was **rescued** into `tests/test_reconciler_matching.py` (commit `9bc44a1`)
+because it guards a live correctness property of the new pipeline, restoring the
+suite to **83 passing**.
+
+**Second cleanup pass (commit `fcce14e`)** removed four more orphaned modules
+surfaced by the post-Phase-6 audit (zero importers in the active path or tests):
+`core/ai_analyst.py` (66 LOC — superseded by the Phase 6 PDF-via-Claude plan),
+`core/file_detector.py` (127 LOC — only the deleted `upload_panel` used it),
+`core/anomalies.py` (234 LOC — flag catalogue retained verbatim in
+`reconciler/types.py`, tested via `test_reconciler_types.py`), and
+`workers/upload_worker.py` (33 LOC — only the deleted `upload_panel` used it).
+The spec's four matching hidden-imports were dropped too.
+
+After both passes `core/` holds only `__init__.py`, `config.py`, `parsers.py`.
+**Total cleanup across both passes: 2,333 LOC removed across 9 files.** Test
+suite: **83 passing**.
 
 ---
 
@@ -462,3 +475,6 @@ held 2 tests — the legacy-parity test plus a `match_outflows=off` behaviour te
 | `e5eaaec` | 4 ✅  | UI rewire to new pipeline + accounts-driven main window |
 | `60d72cb` | 6 ✅  | PDF-via-Claude parser stub + plan doc |
 | `f9723c8` | cleanup | Remove legacy MTN/Airtel code paths and parity test |
+| `9bc44a1` | cleanup | Rescue match_outflows=False CR-omission test from deleted parity file |
+| `fcce14e` | cleanup | Remove final orphaned modules (ai_analyst, file_detector, anomalies, upload_worker) |
+| `27a208a` | docs | Document final orphan cleanup in BUILD_PLAN |
