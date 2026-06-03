@@ -33,13 +33,13 @@ sudo tee "$DESKTOP_DIR/bsr_recon.desktop" > /dev/null << DESKTOP
 Version=1.0
 Name=BSR Reconciliation Tool
 GenericName=Merchant Reconciliation
-Comment=Bunyonyi Safaris Resort - MTN and Airtel merchant reconciliation
+Comment=Bunyonyi Safaris Resort - Multi-account merchant and petty cash reconciliation
 Exec=$INSTALL_DIR/BSR_Recon
 Icon=bsr_recon
 Terminal=false
 Type=Application
 Categories=Office;Finance;Accounting;
-Keywords=reconciliation;merchant;MTN;Airtel;BSR;accounting;
+Keywords=reconciliation;merchant;petty;cash;MTN;Airtel;BSR;accounting;
 StartupNotify=true
 StartupWMClass=BSR_Recon
 DESKTOP
