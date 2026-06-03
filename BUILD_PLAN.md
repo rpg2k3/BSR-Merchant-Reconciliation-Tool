@@ -384,10 +384,43 @@ Work in this order. Stop and ask before moving between phases. After each phase,
   clone contains no statement data; the encrypted drive holds the samples
   locally.
 
-### Phase 6 — (Defer; do not build yet, just stub) Claude API for PDF parsing
-- Create `parsers/pdf_via_claude_api.py` as a stub that raises `NotImplementedError` with a clear message.
-- Add a `claude_api_key` field to a `config/secrets.yaml` (git-crypt encrypted) with a placeholder.
-- Document the future plan in `docs/pdf_parser_plan.md`: when a new bank provides only PDF statements, this parser will call Anthropic's API with the PDF as a document attachment, asking the model to extract transactions into the `NormalizedRecord` schema as JSON. Keep deferred — the user does not have an Anthropic API key yet.
+### Phase 6 — Claude API for PDF parsing (stub only, deferred) ✅ done — commit `60d72cb`
+- `parsers/pdf_via_claude_api.py`: registered parser stub whose `parse()` raises
+  `NotImplementedError("PDF parsing via Anthropic API is not yet implemented.
+  See docs/pdf_parser_plan.md for the plan.")`. Registered in
+  `parsers/__init__.py` under `pdf_via_claude_api` — discoverable but inert.
+- `config/secrets.yaml.example`: `claude_api_key: ""` placeholder. The real
+  `config/secrets.yaml` is **git-ignored** (not git-crypt — the security
+  strategy changed in Phase 5 to VeraCrypt full-disk encryption).
+- `docs/pdf_parser_plan.md`: design for the future flow — PDF sent to Claude as
+  a document attachment, model extracts transactions into the `NormalizedRecord`
+  schema as JSON, app validates and returns them. Deferred — the user has no
+  Anthropic API key yet.
+- Tests: registry now expects 5 parsers; new test asserts the stub raises
+  `NotImplementedError` with the documented message. 84 passing at this commit.
+
+### Final cleanup (2026-06-03) — remove legacy MTN/Airtel-only code paths — commit `f9723c8`
+After Phases 1-4 cut the live app over to `parsers/` + `reconciler/` +
+`workers/pipeline_workers.py`, the old single-flow modules were dead code (no
+active importer). Removed:
+- `core/updater.py` — legacy MTN/Airtel statement updater (only `qt_workers` used it).
+- `core/reconciler.py` — legacy reconciliation engine, superseded by `reconciler/`.
+- `ui/upload_panel.py` — legacy upload UI, not on the new accounts-driven path.
+- `workers/qt_workers.py` — legacy QThread worker, replaced by `pipeline_workers.py`.
+- `tests/test_reconciler_mtn_parity.py` — Phase 3 transitional scaffolding that
+  asserted the new engine matched the legacy one (delta = 0 verified at commit
+  `7434e0c`); the legacy engine is gone, so the comparison no longer applies.
+  Granular `tests/test_reconciler_matching.py` covers ongoing matching-logic
+  regressions; git history preserves the legacy engine if ever needed.
+
+`BSR_Recon.spec` hidden imports were updated to match (dropped the four deleted
+modules, added the live `workers.pipeline_workers` and `parsers.pdf_via_claude_api`).
+**Kept** `core/anomalies.py` — its audit-flag catalogue was copied verbatim into
+`reconciler/types.py` + `reconciler/audit.py` (the new code does not import it, so
+it is technically orphaned, but retained as the source-of-record for the flags).
+
+Net: ~1,877 lines removed. Test suite: **82 passing** (the deleted parity file
+held 2 tests — the legacy-parity test plus a `match_outflows=off` behaviour test).
 
 ---
 
@@ -427,3 +460,5 @@ Work in this order. Stop and ask before moving between phases. After each phase,
 | `d0db531` | 2 ✅  | Hotfix: migrate_layout uses canonical XDG path regardless of invocation |
 | `7434e0c` | 3 ✅  | Reconciler package: matching + bidirectional + audit + writer |
 | `e5eaaec` | 4 ✅  | UI rewire to new pipeline + accounts-driven main window |
+| `60d72cb` | 6 ✅  | PDF-via-Claude parser stub + plan doc |
+| `f9723c8` | cleanup | Remove legacy MTN/Airtel code paths and parity test |
